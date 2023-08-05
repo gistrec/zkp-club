@@ -1,0 +1,164 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Заявки</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@latest/dist/css/tabler.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@tabler/core@latest/dist/js/tabler.min.js"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script type="text/javascript">
+        async function vote(user_id, status, elem) {
+            console.assert(status == "approve" || status == "reject");
+            const statuses = {"approve": "принять", "reject": "отклонить"}
+
+            Telegram.WebApp.showPopup({
+                message: `Вы действительно хотите ${statuses[status]} заявку?`,
+                buttons: [
+                    {id: 'false', text: 'Нет'},
+                    {id: 'true', text: 'Да'},
+                ]
+            }, async function(buttonId) {
+                if (buttonId != "true") return;
+
+                const response = await fetch(`https://id94y26uyi.execute-api.eu-central-1.amazonaws.com/production/applications/${user_id}/status`, {
+                    method: 'PUT',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        initData: Telegram.WebApp.initData,
+                        status: status,
+                    })
+                });
+
+                if (response.status != 200) {
+                    throw new Error("Сервер вернул ошибку")
+                }
+
+                elem.closest(".col-12").remove()
+            });
+        }
+
+        window.onload = async () => {
+            try {
+                Telegram.WebApp.ready();
+                console.log(Telegram.WebApp)
+
+                const cgi_params = `initData=${Telegram.WebApp.initData}`;
+                const response = await fetch(`https://id94y26uyi.execute-api.eu-central-1.amazonaws.com/production/applications?${cgi_params}`);
+                const body = await response.json();
+
+                for (const applicant of body) {
+                    const user_id = applicant["user_id"];
+
+                    let name = []
+                    if (applicant["telegram_user"]["first_name"]) {
+                        name.push(applicant["telegram_user"]["first_name"])
+                    }
+                    if (applicant["telegram_user"]["last_name"]) {
+                        name.push(applicant["telegram_user"]["last_name"])
+                    }
+                    if (applicant["telegram_user"]["username"]) {
+                        name.push(`(@${applicant["telegram_user"]["username"]})`)
+                    }
+                    name = name.join(" ")
+
+                    const positive = '<svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M21 14l-3 -3h-7a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1h9a1 1 0 0 1 1 1v10"></path><path d="M14 15v2a1 1 0 0 1 -1 1h-7l-3 3v-10a1 1 0 0 1 1 -1h2"></path></svg>';
+                    const negative = '<svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M3 3l18 18"></path><path d="M11 11a1 1 0 0 1 -1 -1m0 -3.968v-2.032a1 1 0 0 1 1 -1h9a1 1 0 0 1 1 1v10l-3 -3h-3"></path><path d="M14 15v2a1 1 0 0 1 -1 1h-7l-3 3v-10a1 1 0 0 1 1 -1h2"></path></svg>';
+
+                    const positive_count = Object.keys(applicant["application"]["positive_reviews"]).length;
+                    const negative_count = Object.keys(applicant["application"]["negative_reviews"]).length;
+
+                    document.getElementById("users").innerHTML += `
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <ul class="nav nav-tabs nav-fill card-header-tabs" data-bs-toggle="tabs">
+                                        <li class="nav-item">
+                                            <a href="#profile-${user_id}" class="nav-link active" data-bs-toggle="tab" role="tab">Профиль</a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a href="#positive-${user_id}" class="nav-link" data-bs-toggle="tab" role="tab">${positive} (${positive_count})</a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a href="#negative-${user_id}" class="nav-link" data-bs-toggle="tab" role="tab">${negative} (${negative_count})</a>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div class="card-body">
+                                    <div class="tab-content">
+                                        <div class="tab-pane active show" id="profile-${user_id}">
+                                            <div class="row align-items-center mb-4">
+                                                <div class="col-auto">
+                                                    <span class="avatar avatar-xl" style="background-image: url(https://id94y26uyi.execute-api.eu-central-1.amazonaws.com/production/avatar/${applicant["application"]["data"]["avatar_url"]})"></span>
+                                                </div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <div class="form-label">ФИО</div>
+                                                <input id="full_name" type="text" class="form-control" disabled value="${applicant["application"]["data"]["full_name"]}">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Ссылки на сайты</label>
+                                                <textarea class="form-control" rows="3" disabled>${applicant["application"]["data"]["sites_links"].join("\n")}</textarea>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Ссылки на соц. сети</label>
+                                                <textarea class="form-control" rows="3" disabled>${applicant["application"]["data"]["social_links"].join("\n")}</textarea>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Цифровые показатели бизнеса</label>
+                                                <textarea class="form-control" rows="5" disabled>${applicant["application"]["data"]["achievements"]}</textarea>
+                                            </div>
+                                            <div class="mb-4">
+                                                <label class="form-label">О себе</label>
+                                                <textarea class="form-control" rows="5" disabled>${applicant["application"]["data"]["bio"]}</textarea>
+                                            </div>
+                                        </div>
+                                        <div class="tab-pane" id="positive-${user_id}">
+                                        </div>
+                                        <div class="tab-pane" id="negative-${user_id}">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex">
+                                    <a href="#" onclick="vote(${user_id}, "approve", this); return false;" class="card-btn">Одобрить</a>
+                                    <a href="#" onclick="vote(${user_id}, "reject", this); return false;" class="card-btn">Отклонить</a>
+                                </div>
+                            </div>
+                        </div>`;
+
+                    for (const reviewer_id in applicant["application"]["positive_reviews"]) {
+                        document.getElementById(`positive-${user_id}`).innerHTML +=
+                            `<div class="col-md-8">
+                                <h3>${reviewer_id}</h3>
+                                <p>${applicant["application"]["positive_reviews"][reviewer_id]}</p>
+                            </div>`;
+                    }
+                    for (const reviewer_id in applicant["application"]["negative_reviews"]) {
+                        document.getElementById(`negative-${user_id}`).innerHTML +=
+                            `<div class="col-md-8">
+                                <h3>${reviewer_id}</h3>
+                                <p>${applicant["application"]["negative_reviews"][reviewer_id]}</p>
+                            </div>`;
+                    }
+                }
+            } catch (err) {
+                console.log(err)
+            }
+            
+        }
+    </script>
+</head>
+<body>
+    <div class="page-wrapper">
+        <div class="page-body">
+            <div class="container-xl">
+                <div id="users" class="row row-cards">
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

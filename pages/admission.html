@@ -1,0 +1,225 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Admission</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@latest/dist/css/tabler.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@tabler/core@latest/dist/js/tabler.min.js"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script type="text/javascript">
+        window.onload = () => {
+            Telegram.WebApp.ready();
+            console.log(Telegram.WebApp)
+
+            for (const input of document.getElementsByClassName("maybe-invalid")) {
+                input.addEventListener("keydown", () => { input.classList.remove("is-invalid") })
+                input.addEventListener("change", () => { input.classList.remove("is-invalid") })
+            }
+        }
+
+        function showError(text) {
+            console.log(text)
+            document.getElementById("error-card").style.display = "block"
+            document.getElementById("error").innerHTML = text
+            window.scrollTo(100, document.body.scrollHeight)
+        }
+
+        function updateAvatar(files) {
+            if (!files) return;
+
+            window.file = files[0]
+
+            // Рендерим картинку
+            const url = window.URL.createObjectURL(window.file);
+            avatar = document.getElementById("avatar")
+            avatar.style.backgroundImage = `url(${url})`
+        }
+
+        function submit() {
+            let error_count = 0
+
+            const full_name = document.getElementById("full_name")
+            if (!full_name.value) {
+                full_name.classList.add("is-invalid")
+                error_count++
+            }
+            const phone = document.getElementById("phone")
+            if (!phone.value) {
+                phone.classList.add("is-invalid")
+                error_count++
+            }
+            const sites_links = document.getElementById("sites_links")
+            if (!sites_links.value) {
+                sites_links.classList.add("is-invalid")
+                error_count++
+            }
+            const social_links = document.getElementById("social_links")
+            if (!social_links.value) {
+                social_links.classList.add("is-invalid")
+                error_count++
+            }
+            const achievements = document.getElementById("achievements")
+            if (!achievements.value) {
+                achievements.classList.add("is-invalid")
+                error_count++
+            }
+            const bio = document.getElementById("bio")
+
+            agree_1 = document.getElementById("agree-1")
+            if (!document.getElementById("agree-1").checked) {
+                agree_1.classList.add("is-invalid")
+                error_count++
+            }
+
+            agree_2 = document.getElementById("agree-2")
+            if (!document.getElementById("agree-2").checked) {
+                agree_2.classList.add("is-invalid")
+                error_count++
+            }
+
+            if (!window.file) {
+                Telegram.WebApp.showAlert("Необходимо добавить вашу фотографию");
+                return;
+            }
+
+            if (error_count > 0) {
+                return
+            }
+
+            const formData = new FormData();
+            formData.append('initData', Telegram.WebApp.initData);
+            formData.append('extension', window.file.name.split('.').pop())
+            formData.append('image', window.file);
+            formData.append('application', JSON.stringify({
+                full_name: full_name.value,
+                phone: phone.value,
+                sites_links: sites_links.value.split('\n'),
+                social_links: social_links.value.split('\n'),
+                achievements: achievements.value,
+                bio: bio.value,
+            }))
+
+            document.getElementById("progress").style.display = "flex";
+
+            const xhr = new XMLHttpRequest();
+            xhr.open("POST", "https://id94y26uyi.execute-api.eu-central-1.amazonaws.com/production/zkp-club-avatar-uploader");
+            xhr.onload = function() {
+                if (xhr.status != 200) {
+                    showError(`Сервер вернул ошибку (${xhr.status}: ${xhr.statusText})`)
+                    return;
+                }
+                
+                Telegram.WebApp.showPopup({
+                    message: 'Заявка на вступление успешно заполнена. Подождите пожалуйста, пока за неё проголосуют действующие члены клуба.',
+                    buttons: [
+                        {id: 'close', text: 'Отлично'},
+                    ]
+                }, function(buttonId) {
+                    Telegram.WebApp.close();
+                });
+            };
+            xhr.send(formData);                
+        }
+    </script>
+</head>
+<body>
+    <div class="page-wrapper">
+        <div class="page-body">
+            <div class="container-xl">
+                <div class="row row-cards">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Заявка на вступление в бизнес клуб ЗКП</h3>
+                            </div>
+                            <div class="card-body">
+                                <p class="card-subtitle">Дорогие предприниматели, после формирования Вами заявки,
+                                    действующие члены
+                                    сообщества анонимно голосуют за принятия Вас в клуб. Если положительных голосов >
+                                    50%, добавляем в
+                                    наши чаты, и вы сможете посещать наши встречи.</p>
+                                <div class="row align-items-center mb-4">
+                                    <div class="col-auto">
+                                        <span id="avatar" class="avatar avatar-xl"></span>
+                                    </div>
+                                    <div class="col-auto">
+                                        <input type="file" id="upload" accept="image/png, image/jpeg"
+                                            onChange="updateAvatar(this.files)" style="display: none" />
+                                        <a onclick="document.getElementById('upload').click(); return false;" href="#"
+                                            class="btn">Выбрать
+                                            фотографию</a>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="form-label required">Ваше ФИО</div>
+                                    <input id="full_name" type="text" class="form-control maybe-invalid" value="Test Name">
+                                </div>
+                                <div class="mb-3">
+                                    <div class="form-label required">Ваш телефон</div>
+                                    <input id="phone" type="text" class="form-control maybe-invalid"
+                                        placeholder="+7 (000) 000-00-00" value="+70000000000">
+                                    <small class="form-hint">Будет виден только администраторам</small>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label required">Ссылки на сайты</label>
+                                    <textarea id="sites_links" class="form-control maybe-invalid" rows="3">test.site</textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label required">Ссылки на соц. сети</label>
+                                    <textarea id="social_links" class="form-control maybe-invalid" rows="3">test.site</textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label required">Цифровые показатели бизнеса</label>
+                                    <textarea id="achievements" class="form-control maybe-invalid" rows="5"
+                                        placeholder="Цифровые показатели вашего бизнеса, которыми можете поделиться">test achievements</textarea>
+                                </div>
+                                <div class="mb-4">
+                                    <label class="form-label">О себе</label>
+                                    <textarea id="bio" class="form-control" rows="5"
+                                        placeholder="Например хобби и интересы"></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-check form-switch">
+                                        <input id="agree-1" class="form-check-input maybe-invalid" type="checkbox">
+                                        <span class="form-check-label required">Соглашаюсь не продавать услуги и не
+                                            размещать объявления
+                                            внутри клуба</span>
+                                    </label>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-check form-switch">
+                                        <input id="agree-2" class="form-check-input maybe-invalid" type="checkbox">
+                                        <span class="form-check-label required ">Соглашаюсь, что неверно заполненные
+                                            данные могут привести к
+                                            отклонению заявки</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="card-footer text-end">
+                                <a href="#" class="btn btn-primary" onclick="submit(); return false;">Отправить заявку</a>
+                            </div>
+                        </div>
+                        <div id="progress" class="progress" style="display: none">
+                            <div class="progress-bar progress-bar-indeterminate bg-green"></div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div id="error-card" class="card" style="display: none;">
+                            <div class="card-header">
+                                <h3 class="card-title" style="color: red">Не удалось отправить вашу анкету</h3>
+                            </div>
+                            <div class="card-body">
+                                <p class="card-subtitle">Попробуйте повторить запрос позже. Если ошибка повторится,
+                                    напишите
+                                    администратору.</p>
+                                <pre id="error"></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
