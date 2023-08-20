@@ -17,8 +17,14 @@ from telegram.constants import ParseMode
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 
+from zkpclub.sentry import init as init_sentry
+
+
 dynamodb = boto3.resource("dynamodb")
 table = dynamodb.Table(os.getenv('TABLE_NAME'))
+
+
+init_sentry()
 
 
 def validate_init_data(init_data, c_str="WebAppData"):

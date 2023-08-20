@@ -15,6 +15,10 @@ from urllib.parse import unquote, parse_qs
 import telegram
 
 from zkpclub.templates import Application, UserData, from_json, to_json
+from zkpclub.sentry import init as init_sentry
+
+
+init_sentry()
 
 
 dynamodb = boto3.resource("dynamodb")

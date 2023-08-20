@@ -1,6 +1,7 @@
 import asyncio
 import boto3
 import json
+import logging
 import time
 import os
 
@@ -14,6 +15,7 @@ from telegram.ext import Application, ContextTypes, Defaults, CommandHandler, Ch
 from telegram.constants import ParseMode
 
 from zkpclub.templates import DatabaseUser, TelegramUser, from_json, to_json
+from zkpclub.sentry import init as init_sentry
 
 
 dynamodb = boto3.resource("dynamodb")
@@ -25,12 +27,14 @@ defaults = Defaults(parse_mode=ParseMode.MARKDOWN)
 application = Application.builder().token(telegram_token).defaults(defaults).build()
 
 
+init_sentry()
+
+
 # Добавляем в context.user_data["database"] информацию о пользователе
 async def preprocess_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print(update)
     db_response = table.get_item(Key={"user_id": update.effective_user.id})
     if "Item" not in db_response:
-        print(f"Добавляем в БД информацию о пользователе {update.effective_user}")
+        logging.debug("Добавляем в БД информацию о новом пользователе")
 
         telegram_user = TelegramUser(
             id=update.effective_user.id,
@@ -44,18 +48,25 @@ async def preprocess_request(update: Update, context: ContextTypes.DEFAULT_TYPE)
         context.user_data["database"] = database_user
         table.put_item(Item=to_json(database_user))
     else:
+        logging.debug("Информация о пользователе найдена в БД")
         context.user_data["database"] = from_json(db_response["Item"])
+
+    logging.debug(to_json(context.user_data["database"]))
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logging.info("Обработка команды /start")
+
     # Доступные статусы: idle, processing, accepted, rejected
     # idle - отправляем кнопку на заполнение анкеты
     # processing - пишем, что заявка еще рассматривается
     # accepted - отправляем ссылку на чат
     # rejected - отправляем сообщение, что вы можете связаться с администраторами
     application_status = context.user_data["database"].application.status
-    
+    logging.debug(f"Текущий статус пользователя {application_status}")
+
     if application_status == "idle":
+        logging.info("Предлагаем заполнить заявку")
         await update.message.reply_text(
             text=welcome_message,
             reply_markup=InlineKeyboardMarkup([
@@ -64,12 +75,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         )
         return
     if application_status == "processing":
+        logging.info("Отвечаем, что заявка находится в процессе рассмотрения")
         await update.message.reply_text(voting_process_message)
         return
     if application_status == "accepted":
+        logging.info("Отвечаем, что заявка была одобрена")
         await update.message.reply_text(application_already_approved_message)
         return
     if application_status == "rejected":
+        logging.info("Отвечаем, что заявка была одобрена")
         await update.message.reply_text(application_already_rejected_message)
         return
 
@@ -142,9 +156,8 @@ async def process_telegram_message(telegram_message, context):
 
 
 def lambda_handler(event, context):
-    print(event)
     telegram_message = event["body"]
-    print(telegram_message)
+    logging.debug(telegram_message)
 
     loop = asyncio.get_event_loop()
     return loop.run_until_complete(process_telegram_message(telegram_message, context))
