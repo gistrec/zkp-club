@@ -14,7 +14,7 @@ import hashlib
 from urllib.parse import unquote, parse_qs
 import telegram
 
-from templates import Application, UserData, from_json, to_json
+from zkpclub.templates import Application, UserData, from_json, to_json
 
 
 dynamodb = boto3.resource("dynamodb")

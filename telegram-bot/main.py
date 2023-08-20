@@ -12,7 +12,8 @@ from messages import build_general_vote_message, build_admin_vote_message
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, WebAppInfo
 from telegram.ext import Application, ContextTypes, Defaults, CommandHandler, ChatJoinRequestHandler, MessageHandler, TypeHandler, filters
 from telegram.constants import ParseMode
-from templates import DatabaseUser, TelegramUser, from_json, to_json
+
+from zkpclub.templates import DatabaseUser, TelegramUser, from_json, to_json
 
 
 dynamodb = boto3.resource("dynamodb")

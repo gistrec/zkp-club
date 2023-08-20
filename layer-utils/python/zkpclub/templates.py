@@ -9,8 +9,8 @@ from dataclasses import dataclass, field, asdict
 #class ApplicationStatus(Enum):
 #    idle = 'idle'
 #    processing = 'processing'
- #   accepted = 'accepted'
- #   rejected = 'rejected'
+#    accepted = 'accepted'
+#    rejected = 'rejected'
 
 
 @dataclass
