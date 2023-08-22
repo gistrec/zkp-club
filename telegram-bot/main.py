@@ -15,7 +15,7 @@ from telegram.ext import Application, ContextTypes, Defaults, CommandHandler, Ch
 from telegram.constants import ParseMode
 
 from zkpclub.templates import DatabaseUser, TelegramUser, from_json, to_json
-from zkpclub.sentry import init as init_sentry
+from zkpclub.sentry import init as init_sentry, set_telegram_user
 
 
 dynamodb = boto3.resource("dynamodb")
@@ -147,6 +147,8 @@ async def process_telegram_message(telegram_message, context):
             await application.initialize()
 
         update = Update.de_json(json.loads(telegram_message), application.bot)
+        set_telegram_user(update.effective_user.id, update.effective_user.username)
+
         await application.process_update(update)
     except Exception as e:
         print(e)

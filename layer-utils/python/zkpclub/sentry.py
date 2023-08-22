@@ -29,3 +29,10 @@ def init():
         ],
         traces_sample_rate=1.0,
     )
+
+
+def set_telegram_user(id, username = None):
+    sentry_sdk.set_user({
+        "id": id,
+        "username": username,
+    })
